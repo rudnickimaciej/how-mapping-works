@@ -11,8 +11,8 @@ Select * from Pracownicy where id=2;
 
 Posłużymy się abstrakcją z przestrzenii System.Data.SqlClient.
 
-```
-                con.Open();
+```csharp
+               con.Open();
                 try
                 {
                     using (SqlCommand command = new SqlCommand(
@@ -44,7 +44,5 @@ Posłużymy się abstrakcją z przestrzenii System.Data.SqlClient.
                 catch(Exception e)
                 {
                     throw new Exception("Error: " + e.Message);
-                }
-
-
+                }               
 ```
