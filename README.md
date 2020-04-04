@@ -1,4 +1,4 @@
-﻿# How ORM works
+﻿# Jak działa maper?
 
 W jaki sposób rekord zapisany w bazie danych np. w tabeli Person przekształcić w obiekt C# klasy Person?
 
@@ -79,6 +79,35 @@ Refleksja pozwala nam automatycznie uzyskać m.in. nazwy pól i typy naszej klas
 ```
 
 Posiadając mechanizm dynamicznego uzyskiwania pól klasy, możemy zmienić kod mapujący.
+
+
+```csharp
+                while (reader.Read())
+                {
+                   PropertyInfo[] properties = GetProperties<Person>();
+
+                   object[] valuesForConstructor = new object[properties.Length];
+
+                     for  (int i=0;i<valuesForConstructor.Length;i++)
+                     {
+                        valuesForConstructor[i] = reader.GetValue(i);
+                     };
+                     return (Person)Activator.CreateInstance(typeof(Person),valuesForConstructor);
+                }
+               
+```               
+Spójrz na powyższy kod. Klasa Activator pozwala nam na dynamiczne tworzenie obiektu danego typu. 
+Zauważ, że przyjmuje on tablice parametrów typu object. Tablicą tą będą parametry naszego konstruktora. 
+Nie wiemy jakiego typu one będą i  nas to nie interesuje bo każdy z nich pośrednio dziedziczy po klasie object,
+a więc będzie mógł zostać umieszczony w tablicy. 
+
+Tak więc 
+    reader.GetValue (0) i reader. GetValue (2) zwrócą obiekt o typie int.
+    reader.GetValue (1) zwróci obiekt o typie string. 
+Wszystkie te obiekty umieszczamy w tablicy valuesForConstructor, której następnie używamy do stworzenia Klasy Person.
+
+
+Problem z tą implementacją jest jednak taki, że kolejność argumentów w konstruktorze Person musi być identyczna jak kolejność czytania pól z tabeli. 
 
 
                 

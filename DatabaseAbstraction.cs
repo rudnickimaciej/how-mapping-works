@@ -87,7 +87,7 @@ namespace Refleksja
                                 {
                                     array[i] = reader.GetValue(i);
                                 };
-                                return CreateInstance<Person>(array);
+                                return (Person)Activator.CreateInstance(typeof(Person),array);
                             }
                             return null;
                         }
