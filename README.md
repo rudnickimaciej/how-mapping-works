@@ -106,8 +106,10 @@ Tak więc
     reader.GetValue (1) zwróci obiekt o typie string. 
 Wszystkie te obiekty umieszczamy w tablicy valuesForConstructor, której następnie używamy do stworzenia Klasy Person.
 
+W ten sposób nadaliśmy naszego kodowi więcej dynamiczności. 
 
 Problem z tą implementacją jest jednak taki, że kolejność argumentów w konstruktorze Person musi być identyczna jak kolejność czytania pól z tabeli. 
 
 
                 
+Do tej pory mapowaliśmy dane z tabeli, w której kolumny były w takiej samej kolejności jak pola w klasie Person. 
