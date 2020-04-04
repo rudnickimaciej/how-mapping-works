@@ -11,9 +11,9 @@ namespace Refleksja
 
             Person p = new Person();
             Type t = p.GetType();
-            PropertyInfo[] fi = t.GetProperties();
-            foreach (PropertyInfo field in fi)
-                Console.WriteLine("Field: {0}", field.Name);
+            PropertyInfo[] properties = t.GetProperties();
+            foreach (PropertyInfo prop in properties)
+                Console.WriteLine("Properties: {0}, {1}", prop.Name, prop.PropertyType );
 
 
             DatabaseAbstraction db = new DatabaseAbstraction();
