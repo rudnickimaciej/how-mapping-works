@@ -4,6 +4,7 @@ W jaki sposób rekord zapisany w bazie danych np. w tabeli Person przekształci�
 
 Dane z tabeli Person → new Pracownik().
 
+
 Najprostszym sposobem  jest bezpośrednie wysłanie zapytania do bazy danych np. takiego:
 
 Select * from Pracownicy where id=2;
@@ -49,6 +50,8 @@ Posłużymy się abstrakcją z przestrzenii System.Data.SqlClient.
                 }     
              }
 ```
+![1](https://user-images.githubusercontent.com/42208564/78453794-6c27b380-7694-11ea-92a0-f2f546dd5b23.png)
+
 
 Takie podejście wymaga od nas posiadania informacji o nazwach pól klasy Person i ich typach.
 
