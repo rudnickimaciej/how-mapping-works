@@ -112,7 +112,57 @@ Wszystkie te obiekty umieszczamy w tablicy valuesForConstructor, której następ
 W ten sposób nadaliśmy naszego kodowi więcej dynamiczności. 
 
 Problem z tą implementacją jest jednak taki, że kolejność argumentów w konstruktorze Person musi być identyczna jak kolejność czytania pól z tabeli. 
+Obostrzenie to możemy rozwiązać na dwa sposoby:
+
+1) Stworzenie dodatkowego mechanizmu, który podczas mapowania będzie inteligentnie przydzielał nazwy kolumny tabeli do odpowiednich pól obiektu
+2) Stworzenie dodatkowego mechanizmu, który będzie automatycznie tworzył tabelę w taki sposób, żeby kolejność kolumn była taka sama jak kolejność pól w obiekcie.
+
+Drugi scenariusz możemy zaimplementować poniższym kodem, znów używając refleksji:
 
 
-                
-Do tej pory mapowaliśmy dane z tabeli, w której kolumny były w takiej samej kolejności jak pola w klasie Person. 
+```csharp
+         public void CreateTable<T>()
+        {
+
+            Dictionary<Type, string> dict = new Dictionary<Type, string>
+            {
+                { typeof(Int32),"int" },
+                { typeof(string),"varchar(20)"}
+
+            };
+        
+           using (SqlConnection con = new SqlConnection(_connString))
+            {
+                con.Open();
+
+                try
+                {
+                    PropertyInfo[] properties = GetProperties<Person>();
+                    string query = "create table " + getTypeName(typeof(Person).ToString()) + "(";
+                    for(int i = 0; i < properties.Length; i++)
+                    {
+                        query += properties[i].Name + " " + dict[properties[i].PropertyType];
+                        if (properties[i].Name == "Id" || properties[i].Name== "id") query += " primary key ";
+                        query += ", ";
+                    }
+                    query += ")";
+                     
+                    using (SqlCommand command = new SqlCommand(query,con))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                }
+                catch(Exception e)
+                {
+                    throw new Exception("Error: " + e.Message);
+
+                }
+            }
+        }
+```
+
+Automatyzacja tworzenia tabeli wymaga od nas informacji na jakie typy w bazie danych mają być mapowane typy c#. 
+Informację tę umieściliśmy w słowniku.
+
+
+
