@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Mail;
 using System.Reflection;
 
 
@@ -19,6 +20,8 @@ namespace Refleksja
             DatabaseAbstraction db = new DatabaseAbstraction();
             db.CreateTable<Person>();
             Person p2 = db.GetPerson(1);
+
+            
         }
     }
 }
