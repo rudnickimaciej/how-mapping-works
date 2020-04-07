@@ -18,8 +18,12 @@ namespace Refleksja
 
 
             DatabaseAbstraction db = new DatabaseAbstraction();
-            db.CreateTable<Person>();
-            Person p2 = db.GetPerson(1);
+            //db.CreateTable<Person>();
+            //Person p2 = db.GetPerson(1);
+
+            Person person = new Person() { Age = 44, Name="Wald4emar" };
+            db.SavePerson(person);
+
 
             
         }
