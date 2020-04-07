@@ -17,14 +17,17 @@ namespace Refleksja
                 Console.WriteLine("Properties: {0}, {1}", prop.Name, prop.PropertyType );
 
 
-            DatabaseAbstraction db = new DatabaseAbstraction();
-            //db.CreateTable<Person>();
-            //Person p2 = db.GetPerson(1);
 
-            Person person = new Person() { Age = 44, Name="Wald4emar" };
-            db.SavePerson(person);
+            Mapper mapper = new Mapper();
+            mapper.DeleteTable<Person>();
+            mapper.CreateTable<Person>();
+            mapper.Save(new Person() { Age = 23, Name = "Maciek" });
+            mapper.Save(new Person() { Age = 24, Name = "Piotrek" });
+
+            Person p2 = mapper.Get<Person>(1);
 
 
+          
             
         }
     }

@@ -10,6 +10,14 @@ Z każdym kolejnym wpisem będziemy ulepszać naszą implementację, żeby była
 klas.
 
 
+
+#Ogłoszenia techniczne
+2) Nasz kody będzie obsługiwał tylko SQLServer
+1) Do kontaktu z bazą danych będziemy używać abstrakcji z przestrzenii System.Data.SqlClient.
+
+Być może w przyszłości, w miarę w prowadzania ulepszeń, powyższe ograniczenia będą usuniętę.
+
+
 #Mapowanie typów płaskich
 
 Niech typ płaski będzie typem, którego pola są typami prostymi. 
@@ -157,7 +165,7 @@ Drugi scenariusz możemy zaimplementować poniższym kodem, znów używając ref
 
 
 ```csharp
-         public void CreateTable<T>()
+         public void CreateTable()
         {
 
             Dictionary<Type, SqlDbType> dict = new Dictionary<Type, SqlDbType>
@@ -205,3 +213,205 @@ Informację tę umieściliśmy w słowniku.
 
 
 
+#Mapowanie w kierunku przeciwnym: obiekt w programie -> tabela - zapis
+
+
+Teraz w drugą stronę. Chcemy stworzyć obiekt w kodzie i zapisać go w tabeli, o tak:
+
+```csharp 
+            Person person = new Person() { Age = 44, Name="Wald4emar" };
+            db.SavePerson(person);
+```
+
+
+Zdefiniujmy sobie 
+```csharp
+        public void SavePerson(Person person)
+        {
+            using(SqlConnection con = new SqlConnection(_connString))
+            {
+             
+                con.Open();
+                PropertyInfo[] properties = GetProperties<Person>();
+                StringBuilder  queryBuilder = new StringBuilder("insert into  " + getTypeName(typeof(Person).ToString()) + " VALUES(");
+                for (int i = 0; i < properties.Length; i++)
+                {
+                    if (properties[i].Name == "Id") continue;
+
+                    string value = properties[i].GetValue(person).ToString();
+
+                    Console.WriteLine(properties[i].GetType().ToString());
+                    if (properties[i].PropertyType.IsEquivalentTo(typeof(System.String))){
+                        value = "'" + value + "'";
+                    }
+                    queryBuilder.Append(value+",");
+                    
+                }
+                queryBuilder.Remove(queryBuilder.Length - 1, 1);
+                queryBuilder.Append(")");
+
+                Console.WriteLine(queryBuilder.ToString());
+
+                try
+                {
+                    using (SqlCommand command = new SqlCommand(queryBuilder.ToString(),con))
+                    {
+                        int reader = command.ExecuteNonQuery();
+                    }
+                }
+
+                catch (Exception e)
+                {
+                    throw new Exception("Error: " + e.Message);
+                }
+
+            }
+        }
+```
+
+
+#Wprowadzenie nieco generyczności
+
+Proponuję pozmieniać trochę nasze metody w taki sposób, żeby obsługiwały one wszystkie typy płaskie, nie tylko typ Person. 
+
+
+Generyczna metoda CreateTable
+```csharp
+
+ public void CreateTable<T>()
+        {
+
+            Dictionary<Type, SqlDbType> dict = new Dictionary<Type, SqlDbType>
+            {
+                { typeof(Int32), SqlDbType.Int},
+                { typeof(string), SqlDbType.Text}
+
+            };
+        
+           using (SqlConnection con = new SqlConnection(_connString))
+            {
+                con.Open();
+                if (tableExists(getTypeName(typeof(T).ToString()), con)) return;
+
+                try
+                {
+                    PropertyInfo[] properties = GetProperties<T>();
+                    string query = "create table " + getTypeName(typeof(T).ToString()) + "(";
+                    for(int i = 0; i < properties.Length; i++)
+                    {
+                        query += properties[i].Name + " " + dict[properties[i].PropertyType];
+                        if (properties[i].Name == "Id" || properties[i].Name== "id") query += " primary key identity not null ";
+                        query += ", ";
+                    }
+                    query += ")";
+                     
+                    using (SqlCommand command = new SqlCommand(query,con))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                }
+                catch(Exception e)
+                {
+                    throw new Exception("Error: " + e.Message);
+
+                }
+
+                con.Close();
+            }
+        }
+
+```
+Generyczna metoda Save
+```csharp
+        public void Save<T>(T obj)
+        {
+            using(SqlConnection con = new SqlConnection(_connString))
+            {
+             
+                con.Open();
+                PropertyInfo[] properties = GetProperties<T>();
+                StringBuilder  queryBuilder = new StringBuilder("insert into  " + getTypeName(typeof(T).ToString()) + " VALUES(");
+                for (int i = 0; i < properties.Length; i++)
+                {
+                    if (properties[i].Name == "Id") continue;
+
+                    string value = properties[i].GetValue(obj).ToString();
+
+                    if (properties[i].PropertyType.IsEquivalentTo(typeof(System.String))){
+                        value = "'" + value + "'";
+                    }
+                    queryBuilder.Append(value+",");
+                    
+                }
+                queryBuilder.Remove(queryBuilder.Length - 1, 1);
+                queryBuilder.Append(")");
+
+                Console.WriteLine(queryBuilder.ToString());
+
+                try
+                {
+                    using (SqlCommand command = new SqlCommand(queryBuilder.ToString(),con))
+                    {
+                        int reader = command.ExecuteNonQuery();
+                    }
+                }
+
+                catch (Exception e)
+                {
+                    throw new Exception("Error: " + e.Message);
+                }
+
+            }
+        }
+
+```
+
+Oraz generyczna metoda Get
+```csharp
+        public  T Get<T>(int id)
+        {
+            using (SqlConnection con = new SqlConnection(_connString))
+            {
+                con.Open();
+                try
+                {
+                    using (SqlCommand command = new SqlCommand(
+                      "SELECT * FROM " + getTypeName(typeof(T).ToString()) +" where id='"+id +"'", con))
+                    {
+                        SqlDataReader reader = command.ExecuteReader();
+
+                        if (reader.HasRows)
+                        {
+                            while (reader.Read())
+                            {
+                                PropertyInfo[] properties = GetProperties<T>();
+
+                                object[] array = new object[properties.Length];
+
+                                for  (int i=0;i<array.Length;i++)
+                                {
+                                    array[i] = reader.GetValue(i);
+                                };
+                                return (T)Activator.CreateInstance(typeof(T),array);
+                            }
+                            return default(T);
+                        }
+                        else
+                        {
+                            throw new Exception("Error: There is no such record in table.");
+                        }
+
+                    }
+                }
+                catch(Exception e)
+                {
+                    throw new Exception("Error: " + e.Message);
+                }
+            }
+        }
+```
+
+
+# Podsumowanie
+
+W kolejnym wpisie przyjrzymy się czemu metoda Save jest bardzo źle skonstruowana i spróbujemy to naprawić. 

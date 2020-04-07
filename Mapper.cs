@@ -7,7 +7,7 @@ using System.Data;
 
 namespace Refleksja
 {
-   public class DatabaseAbstraction
+   public class Mapper
     {
 
         private const string _connString = "Data Source=DESKTOP-H5FE18K;Initial Catalog=Test;Integrated Security=True";
@@ -55,12 +55,12 @@ namespace Refleksja
            using (SqlConnection con = new SqlConnection(_connString))
             {
                 con.Open();
-                if (tableExists(getTypeName(typeof(Person).ToString()), con)) return;
+                if (tableExists(getTypeName(typeof(T).ToString()), con)) return;
 
                 try
                 {
-                    PropertyInfo[] properties = GetProperties<Person>();
-                    string query = "create table " + getTypeName(typeof(Person).ToString()) + "(";
+                    PropertyInfo[] properties = GetProperties<T>();
+                    string query = "create table " + getTypeName(typeof(T).ToString()) + "(";
                     for(int i = 0; i < properties.Length; i++)
                     {
                         query += properties[i].Name + " " + dict[properties[i].PropertyType];
@@ -83,24 +83,52 @@ namespace Refleksja
                 con.Close();
             }
         }
-        public void SavePerson(Person person)
+
+        public void DeleteTable<T>()
+        {
+
+            using (SqlConnection con = new SqlConnection(_connString))
+            {
+                con.Open();
+                if (tableExists(getTypeName(typeof(T).ToString()), con))
+                {
+                    {
+                        SqlCommand command = new SqlCommand("DROP TABLE " + getTypeName(typeof(T).ToString()), con);
+                        command.ExecuteNonQuery();
+                    }
+                }
+                con.Close();
+            }
+        }
+
+        public void Save<T>(T obj)
         {
             using(SqlConnection con = new SqlConnection(_connString))
             {
              
                 con.Open();
-                PropertyInfo[] properties = GetProperties<Person>();
-                StringBuilder  queryBuilder = new StringBuilder("insert into  " + getTypeName(typeof(Person).ToString()) + " VALUES(");
+                PropertyInfo[] properties = GetProperties<T>();
+                StringBuilder  queryBuilder = new StringBuilder("insert into  " + getTypeName(typeof(T).ToString()) + " VALUES(");
+
                 for (int i = 0; i < properties.Length; i++)
                 {
                     if (properties[i].Name == "Id") continue;
 
-                    string value = properties[i].GetValue(person).ToString();
+                   
+             
+                    //if (properties[i].PropertyType.IsEquivalentTo(typeof(System.DateTime)))
+                    //{
+                    //    DateTime val = (DateTime)properties[i].GetValue(obj);
+                    //    value =val.ToString("yyyy MM dd");
+                    //    value = "'" + value + "'";
+                    //}
+                     string value = properties[i].GetValue(obj).ToString();
 
-                    Console.WriteLine(properties[i].GetType().ToString());
-                    if (properties[i].PropertyType.IsEquivalentTo(typeof(System.String))){
-                        value = "'" + value + "'";
+                    if (properties[i].PropertyType.IsEquivalentTo(typeof(System.String)))
+                    {
+                         value = "'" + value + "'";
                     }
+
                     queryBuilder.Append(value+",");
                     
                 }
@@ -126,7 +154,7 @@ namespace Refleksja
         }
         
 
-        public  Person GetPerson(int id)
+        public  T Get<T>(int id)
         {
             using (SqlConnection con = new SqlConnection(_connString))
             {
@@ -134,7 +162,7 @@ namespace Refleksja
                 try
                 {
                     using (SqlCommand command = new SqlCommand(
-                      "SELECT * FROM  Person where id='"+id +"'", con))
+                      "SELECT * FROM " + getTypeName(typeof(T).ToString()) +" where id='"+id +"'", con))
                     {
                         SqlDataReader reader = command.ExecuteReader();
 
@@ -142,7 +170,7 @@ namespace Refleksja
                         {
                             while (reader.Read())
                             {
-                                PropertyInfo[] properties = GetProperties<Person>();
+                                PropertyInfo[] properties = GetProperties<T>();
 
                                 object[] array = new object[properties.Length];
 
@@ -150,9 +178,9 @@ namespace Refleksja
                                 {
                                     array[i] = reader.GetValue(i);
                                 };
-                                return (Person)Activator.CreateInstance(typeof(Person),array);
+                                return (T)Activator.CreateInstance(typeof(T),array);
                             }
-                            return null;
+                            return default(T);
                         }
                         else
                         {
