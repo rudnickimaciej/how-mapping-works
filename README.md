@@ -1,4 +1,4 @@
-﻿#Jak dziala maper (część 2)
+﻿# Jak dziala maper (część 2)
 
 Dlaczego aktualna implementacja metody Save jest słaba?
 
@@ -77,7 +77,7 @@ Aktualna wersja kodu pozwala nam to definiować w słowniku.
             };
 ```
 
-#Refaktorin metody Save
+# Refaktoryzacja metody Save
 
 
 Skupimy się tylko na tym co znajduje się wewnątrz pętli for ponieważ tylko tutaj będziemy coś zmieniać. Dla przypomnienia.
@@ -185,7 +185,7 @@ Próba dodania możliwości mapowania dodatkowego typu skończyła się okropnym
 nieutrzymywalne, szczególnie gdy będziemy chcieli dodać obsługę większej ilości typów.
 
 
-#Refaktoring metody Save ciąg dalszy
+# Refaktoryzacja metody Save ciąg dalszy
 
 
 
@@ -274,4 +274,4 @@ była umieszczona w pętli for. My dążymy do enkapsulacji i używania abstrakc
 
 ```
 
-#Podsumowanie
+# Podsumowanie
