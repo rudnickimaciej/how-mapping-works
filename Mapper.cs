@@ -4,6 +4,7 @@ using System.Text;
 using System.Data.SqlClient;
 using System.Reflection;
 using System.Data;
+using Refleksja.PropertyMapper;
 
 namespace Refleksja
 {
@@ -48,7 +49,8 @@ namespace Refleksja
             Dictionary<Type, SqlDbType> dict = new Dictionary<Type, SqlDbType>
             {
                 { typeof(Int32), SqlDbType.Int},
-                { typeof(string), SqlDbType.Text}
+                { typeof(string), SqlDbType.Text},
+                {typeof(DateTime),SqlDbType.DateTime }
 
             };
         
@@ -101,6 +103,7 @@ namespace Refleksja
             }
         }
 
+ 
         public void Save<T>(T obj)
         {
             using(SqlConnection con = new SqlConnection(_connString))
@@ -111,27 +114,20 @@ namespace Refleksja
                 StringBuilder  queryBuilder = new StringBuilder("insert into  " + getTypeName(typeof(T).ToString()) + " VALUES(");
 
                 for (int i = 0; i < properties.Length; i++)
-                {
+                { 
                     if (properties[i].Name == "Id") continue;
 
-                   
-             
-                    //if (properties[i].PropertyType.IsEquivalentTo(typeof(System.DateTime)))
-                    //{
-                    //    DateTime val = (DateTime)properties[i].GetValue(obj);
-                    //    value =val.ToString("yyyy MM dd");
-                    //    value = "'" + value + "'";
-                    //}
-                     string value = properties[i].GetValue(obj).ToString();
+                    Type propType = properties[i].PropertyType;
+                    object propValue = properties[i].GetValue(obj);
 
-                    if (properties[i].PropertyType.IsEquivalentTo(typeof(System.String)))
-                    {
-                         value = "'" + value + "'";
-                    }
-
-                    queryBuilder.Append(value+",");
-                    
+                    string value = (string)typeof(PropertyMapperSwitch)
+                        .GetMethod("Map")
+                        .MakeGenericMethod(propType)
+                        .Invoke(null, new[] { propValue });
+                 
+                    queryBuilder.Append(value+",");                  
                 }
+
                 queryBuilder.Remove(queryBuilder.Length - 1, 1);
                 queryBuilder.Append(")");
 
@@ -142,6 +138,8 @@ namespace Refleksja
                     using (SqlCommand command = new SqlCommand(queryBuilder.ToString(),con))
                     {
                         int reader = command.ExecuteNonQuery();
+                        con.Close();
+
                     }
                 }
 

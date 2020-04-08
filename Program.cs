@@ -19,12 +19,10 @@ namespace Refleksja
 
 
             Mapper mapper = new Mapper();
-            mapper.DeleteTable<Person>();
-            mapper.CreateTable<Person>();
-            mapper.Save(new Person() { Age = 23, Name = "Maciek" });
-            mapper.Save(new Person() { Age = 24, Name = "Piotrek" });
+            mapper.DeleteTable<OrderItem>();
+            mapper.CreateTable<OrderItem>();
+            mapper.Save(new OrderItem() { OrderCode=200,OrderDate=DateTime.Now,OrderStatus="Zakończony" });
 
-            Person p2 = mapper.Get<Person>(1);
 
 
           
