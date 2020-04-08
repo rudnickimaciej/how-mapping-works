@@ -52,7 +52,7 @@ Spróbujmy zmapować inną klasę (również płaską), która oprócz powyższy
 
 
 ```csharp
-public class OrderItem
+    public class OrderItem
     {
         public int Id { get; set; }
         public string OrderStatus { get; set; }
@@ -184,7 +184,94 @@ Do czego zmierzam?
 Próba dodania możliwości mapowania dodatkowego typu skończyła się okropnym, proceduralnym kodem, pełnym ifów. Takie podejście jest 
 nieutrzymywalne, szczególnie gdy będziemy chcieli dodać obsługę większej ilości typów.
 
-Kasujemy więc całę wnętrze pętli for i próbujemy zaimplementować ją w lepszy, bardziej obiektowy sposób.
 
 #Refaktoring metody Save ciąg dalszy
 
+
+
+Naszym celem jest przenieść odpowiedzialność przetważania typu na wartość, która będzie arguementem kwarendy. Do tej pory cała ta logika
+była umieszczona w pętli for. My dążymy do enkapsulacji i używania abstrakcji.
+
+
+
+```csharp
+
+
+             public interface IPropertyMapper
+             {   
+                string Map(object property);
+             }
+
+             public class IntPropertyMapper : IPropertyMapper
+             {
+
+                public string Map(object property)
+                {
+                    return property.ToString();
+                }
+             }
+             
+
+            public class StringPropertyMapper : IPropertyMapper
+            {
+                public string Map(object property)
+                {
+                    return "'" + property.ToString() + "'";
+                }
+            }
+
+            public class DateTimePropertyMapper : IPropertyMapper
+            {
+                public string Map(object property)
+                {
+
+                    return "'" + ((DateTime)property).ToString("yyyy-MM-dd") + "'";
+            
+                }
+            }
+
+
+             public class PropertyMapperSwitch
+            {
+                public  static IPropertyMapper GetPropertyMapper<T>() 
+                {
+
+                    switch (Type.GetTypeCode(typeof(T)))
+                    {
+                        case TypeCode.Int32:
+                            return new IntPropertyMapper();
+
+                        case TypeCode.String:
+                            return new StringPropertyMapper();
+
+                        case TypeCode.DateTime:
+                            return new DateTimePropertyMapper();
+
+                    }
+                    throw new Exception("Nie zdefiniowano mappera dla tego typu.");
+                }
+            }
+
+
+
+            for (int i = 0; i < properties.Length; i++)
+            { 
+                    if (properties[i].Name == "Id") continue;
+
+                    Type propType = properties[i].PropertyType;
+                    object propValue = properties[i].GetValue(obj);
+
+                    IPropertyMapper propMapper = (IPropertyMapper)typeof(PropertyMapperSwitch)
+                        .GetMethod("GetPropertyMapper")
+                        .MakeGenericMethod(propType)
+                        .Invoke(null, null);
+
+                    string value = propMapper.Map(propValue);
+                 
+                    queryBuilder.Append(value+",");                  
+            }  
+
+
+```
+
+#Podsumowanie

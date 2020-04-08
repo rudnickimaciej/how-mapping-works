@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Refleksja
+namespace Refleksja.Models
 {
     public class OrderItem
     {

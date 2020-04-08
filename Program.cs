@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Refleksja.Models;
+using System;
 using System.Net.Mail;
 using System.Reflection;
 
@@ -10,7 +11,7 @@ namespace Refleksja
         static void Main(string[] args)
         {
 
-            Person p = new Person();
+            OrderItem p = new OrderItem();
             Type t = p.GetType();
             PropertyInfo[] properties = t.GetProperties();
             foreach (PropertyInfo prop in properties)
@@ -21,7 +22,7 @@ namespace Refleksja
             Mapper mapper = new Mapper();
             mapper.DeleteTable<OrderItem>();
             mapper.CreateTable<OrderItem>();
-            mapper.Save(new OrderItem() { OrderCode=200,OrderDate=DateTime.Now,OrderStatus="Zakończony" });
+            mapper.Save(new OrderItem() { OrderCode=220,OrderDate=DateTime.Now,OrderStatus="e3434" });
 
 
 

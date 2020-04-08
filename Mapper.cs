@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Reflection;
 using System.Data;
 using Refleksja.PropertyMapper;
+using Refleksja.Models;
 
 namespace Refleksja
 {
@@ -23,10 +24,12 @@ namespace Refleksja
             return typeof(T).GetProperties();
         }
 
+
+
         string getTypeName(string name)
         {
-            int index = name.IndexOf('.');
-            return name.Substring(++index);
+            string[] arr = name.Split('.');
+            return arr[arr.Length - 1];
         }
 
         bool tableExists(string tableName,SqlConnection connection)
@@ -120,11 +123,13 @@ namespace Refleksja
                     Type propType = properties[i].PropertyType;
                     object propValue = properties[i].GetValue(obj);
 
-                    string value = (string)typeof(PropertyMapperSwitch)
-                        .GetMethod("Map")
+                    IPropertyMapper propMapper = (IPropertyMapper)typeof(PropertyMapperSwitch)
+                        .GetMethod("GetPropertyMapper")
                         .MakeGenericMethod(propType)
-                        .Invoke(null, new[] { propValue });
-                 
+                        .Invoke(null, null);
+
+                    string value = propMapper.Map(propValue);
+
                     queryBuilder.Append(value+",");                  
                 }
 
