@@ -11,14 +11,14 @@ klas.
 
 
 
-#Ogłoszenia techniczne
+## Ogłoszenia techniczne
 2) Nasz kody będzie obsługiwał tylko SQLServer
 1) Do kontaktu z bazą danych będziemy używać abstrakcji z przestrzenii System.Data.SqlClient.
 
 Być może w przyszłości, w miarę w prowadzania ulepszeń, powyższe ograniczenia będą usuniętę.
 
 
-#Mapowanie typów płaskich
+## Mapowanie typów płaskich
 
 Niech typ płaski będzie typem, którego pola są typami prostymi. 
 
@@ -50,7 +50,7 @@ W naszych rozważaniach posłużymy się klasą Person.
 
 Nasze rozważania zaczniemy od odczytu.
 
-#Mapowanie tabela -> obiekt w programie  
+# Mapowanie tabela -> obiekt w programie  
 
 Posłużymy się abstrakcją z przestrzenii System.Data.SqlClient.
 
@@ -105,7 +105,7 @@ W programowaniu nie chcemy zbyt często czegoś zmieniać, ponieważ przy okazji
 
 Chcemy dążyć do automatyzacji, która pozwoli nam "zapomnieć" o metadanych mapowanej klasy tj. nie używać ich w kodzie źródłowym. 
 
-#Krok 1 w kierunku automatyzacji - refleksja
+# Krok 1 w kierunku automatyzacji - refleksja
 
 
 Refleksja pozwala nam automatycznie uzyskać m.in. nazwy pól i typy naszej klasy. 
@@ -213,7 +213,7 @@ Informację tę umieściliśmy w słowniku.
 
 
 
-#Mapowanie w kierunku przeciwnym: obiekt w programie -> tabela - zapis
+# Mapowanie w kierunku przeciwnym: obiekt w programie -> tabela - zapis
 
 
 Teraz w drugą stronę. Chcemy stworzyć obiekt w kodzie i zapisać go w tabeli, o tak:
@@ -270,7 +270,7 @@ Zdefiniujmy sobie
 ```
 
 
-#Wprowadzenie nieco generyczności
+# Wprowadzenie nieco generyczności
 
 Proponuję pozmieniać trochę nasze metody w taki sposób, żeby obsługiwały one wszystkie typy płaskie, nie tylko typ Person. 
 
