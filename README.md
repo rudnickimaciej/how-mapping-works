@@ -1,277 +1,121 @@
-﻿#Jak dziala maper (część 2)
+﻿#Jak dziala maper (część 3)
 
-Dlaczego aktualna implementacja metody Save jest słaba?
+W tym wpisie spróbujemy iść o krok dalej i zaimplementować mapowanie również obiektów niepłaskich.
+ 
+ 
+ ```csharp
+  public class Person
+    {
+        
+        public int Id { get; set; }
+        public string Name { get; set; }
+        public int Age { get; set; }
+        public Address Address { get; set; }
 
-```csharp
-        public void Save<T>(T obj)
-        {
-            using(SqlConnection con = new SqlConnection(_connString))
-            {
-             
-                con.Open();
-                PropertyInfo[] properties = GetProperties<T>();
-                StringBuilder  queryBuilder = new StringBuilder("insert into  " + getTypeName(typeof(T).ToString()) + " VALUES(");
-                for (int i = 0; i < properties.Length; i++)
-                {
-                    if (properties[i].Name == "Id") continue;
+    }
 
-                    string value = properties[i].GetValue(obj).ToString();
-
-                    if (properties[i].PropertyType.IsEquivalentTo(typeof(System.String))){
-                        value = "'" + value + "'";
-                    }
-                    queryBuilder.Append(value+",");
-                    
-                }
-                queryBuilder.Remove(queryBuilder.Length - 1, 1);
-                queryBuilder.Append(")");
-
-                Console.WriteLine(queryBuilder.ToString());
-
-                try
-                {
-                    using (SqlCommand command = new SqlCommand(queryBuilder.ToString(),con))
-                    {
-                        int reader = command.ExecuteNonQuery();
-                    }
-                }
-
-                catch (Exception e)
-                {
-                    throw new Exception("Error: " + e.Message);
-                }
-
-            }
-        }
-
-```csharp
-
-Dotychczas mapować płaską klasę Person. Posiadała ona dwa rodzaje typów: int i string. 
-Spróbujmy zmapować inną klasę (również płaską), która oprócz powyższych typów będzie zawierać typ DateTime.
-
-
-
-```csharp
-    public class OrderItem
+      public class Address
     {
         public int Id { get; set; }
-        public string OrderStatus { get; set; }
-        public DateTime OrderDate { get; set; }
+        public string Street { get; set; }
+        public string City { get; set; }
+        public int HomeNo { get; set; }
     }
 ```
 
-Na ten moment, tylko metoda Get obsługuje typ DateTime. Przeanalizujmy co musimy dodać do metod CreateTable i Save.
+Klasę Person możemy zmapować na dwa sposoby:
 
-# Refoktoring metody CreateTable
+1) Sposób piewszy
+Stworzymy dwie tablice, jedna będzie przechowywać informacje o Adresie, druga o Person. Tablica Person będzie miała dodatkowo klucz obcy odwołujący
+się do tablicy Address
 
- W tej metodzie musimy tylko dodać informacje dotyczącą mapowania .netowskiego typu DateTime na sqlserverowy odpowiednik.
-Aktualna wersja kodu pozwala nam to definiować w słowniku.
+2) Sposób drugi
+Stworzymy jedną tablicę Person, ale będzie miała ona dodatkowego kolumny z klasy Address (Street varchar() , City varchar(), City int).
+Jest to tak zwane spłaszczanie. Wrzucamy wszystko do jednej tablicy.
 
-```csharp
-            Dictionary<Type, SqlDbType> dict = new Dictionary<Type, SqlDbType>
-            {
-                { typeof(Int32), SqlDbType.Int},
-                { typeof(string), SqlDbType.Text},
-                {typeof(DateTime), SqlDbType.DateTime }
+My zajmiemy się sposobem pierwszym. 
 
-            };
+# Tworzenie struktury tabel
+
+Jak będą wyglądać kwarendy?
+
+```sqlserver
+    CREATE TABLE Address(
+        Id INT IDENTITY PRIMARY KEY NOT NULL,
+        City VARCHAR(20) NOT NULL,
+        Street VARCHAR(20) NOT NULL
+    )
+
+    CREATE TABLE Person(
+        Id INT IDENTITY PRIMARY KEY NOT NULL,
+        Name VARCHAR(20),
+        Age INT,
+        Address_id INT,
+        FOREIGN KEY (Address_id) REFERENCES Address(Id)
+    )
 ```
 
-#Refaktorin metody Save
+Zauważmy, że kolejność wykonywania tych kwarend musi być dokładnie taka jak powyżej. Jeśli spróbujemy najepierw stworzyć tablice Person, a później
+Address, wtedy wyskoczy nam błąd:
 
-
-Skupimy się tylko na tym co znajduje się wewnątrz pętli for ponieważ tylko tutaj będziemy coś zmieniać. Dla przypomnienia.
-
- ```csharp
-                for (int i = 0; i < properties.Length; i++)
-                {
-                    if (properties[i].Name == "Id") continue;
-                                 
-                     string value = properties[i].GetValue(obj).ToString(); //Trywialna konwersja
-
-                    if (properties[i].PropertyType.IsEquivalentTo(typeof(System.String)))
-                    {
-                         value = "'" + value + "'"; //Mniej trywialna konwersja
-                    }
-
-                    queryBuilder.Append(value+",");
-                    
-                }
+```sqlserver 
+    Foreign key 'FK__Person__Address___5CD6CB2B' references invalid table 'Address'.
 ```
 
-Dla tego typu kwarenda INSERT będzie wyglądać następująco:
+Jeśli typ Person miałby więcej typów złożonych, to każda tablica odpowiadająca temu typowi musiała by być tworzona przed tablicą Person.
 
-```sql
-INSERT INTO OrderItem VALUES(200,'zakończony','2020-20-15')
-
-```
-
-Wartość typu int np. 200 jest w sposób trywialny mapowana do zwykłego stringa "5". String ten następnia trafia do kwarendy jest interpretowany jako liczba.
-
-Wartość typu string np. "zakończony", żeby być traktowany jako varchar po stronie sql musi być otoczony przez dodatkowe apostrofy. 
-
-Konwersja DateTime jest już bardziejs skomplikowana. Oprócz tego, że musimy zrzutować DateTime na String to jeszcze musimy otoczyć go apostrofami.
-Dodajmy więc taką logikę to pętli for.
-
-
-
- ```csharp
-                for (int i = 0; i < properties.Length; i++)
-                {
-                    if (properties[i].Name == "Id") continue;
-
-
-                    string value  = properties[i].GetValue(obj).ToString(); //Trywialna konwersja				
-                    
-                    if (properties[i].PropertyType.IsEquivalentTo(typeof(System.String))) //Mniej trywialna konwersja
-                    {
-                       value = "'" + value + "'"; 
-                    }
-
-                    if (properties[i].PropertyType.IsEquivalentTo(typeof(System.DateTime)))  //Bardziej złożona konwersja
-                    {
-                        DateTime val = (DateTime)properties[i].GetValue(obj); 
-                        value =val.ToString("yyyy MM dd");
-                        value = "'" + value + "'";
-                    }
-                    
-                    queryBuilder.Append(value+",");
-                    
-                }
-```
-Wydawać by się mogło, że to koniec. Dodaliśmy kolejny kawałek kodu, który obsługuje pole typu DateTime i zamienia go na stringa w formacie 'yyyy MM dd';
-Jeśli jednak spróbujemy wykonać nasz program, a kod natrafi na pole DateTime klasy OrderItem, wtedy wyskoczy nam następujący błąd.
-
-```csharp 
-        System.Exception: 'Error: Conversion failed when converting date and/or time from character string.'
-```csharp 
-
-Kod natrafiając na pole z typem DateTime, próbuje je konwertować na string za pomocą zwykłej metody ToString(). W przypadku typu int oraz string metoda ta sprawdziła się,
-ale w przypadku DateTime już nie. Dzieje się to dlatego, że przy konwertowaniu DateTime na string musimy jako argument ToString() podać format np. "yyyy MM dd".
-Chcemy taką konwersję przeprowadzać tylko dla DateTime. Można to zrobić, dodając kilka nowych ifów i elsów.
-
- ```csharp
-                for (int i = 0; i < properties.Length; i++)
-                {
-                    if (properties[i].Name == "Id") continue;
-
-                     string value =0;
-
-
-                    if (properties[i].PropertyType.IsEquivalentTo(typeof(System.DateTime)))
-                    {
-                        DateTime val = (DateTime)properties[i].GetValue(obj);
-                        value =val.ToString("yyyy-MM-dd");
-                        value = "'" + value + "'";
-                    }
-
-                    else
-                    {
-                        value  = properties[i].GetValue(obj).ToString(); //Trywialna konwersja				                              
-
-                        if (properties[i].PropertyType.IsEquivalentTo(typeof(System.String)))
-                        {
-                             value = "'" + value + "'"; //Mniej trywialna konwersja
-                        }
-                    }
-
-                    queryBuilder.Append(value+",");
-                    
-                }
-```
-
-Do czego zmierzam? 
-Próba dodania możliwości mapowania dodatkowego typu skończyła się okropnym, proceduralnym kodem, pełnym ifów. Takie podejście jest 
-nieutrzymywalne, szczególnie gdy będziemy chcieli dodać obsługę większej ilości typów.
-
-
-#Refaktoring metody Save ciąg dalszy
-
-
-
-Naszym celem jest przenieść odpowiedzialność przetważania typu na wartość, która będzie arguementem kwarendy. Do tej pory cała ta logika
-była umieszczona w pętli for. My dążymy do enkapsulacji i używania abstrakcji.
-
-
+Co jeśli typ Address skolei miałby w sobie pola złożone? Te pola również musielibyśmy zmapować do odpowiednich tabel.
 
 ```csharp
 
+    public class City
+    {
+        public string Name { get; set; }
+        public string PostalCode { get; set; }
 
-             public interface IPropertyMapper
-             {   
-                string Map(object property);
-             }
+    }
 
-             public class IntPropertyMapper : IPropertyMapper
-             {
-
-                public string Map(object property)
-                {
-                    return property.ToString();
-                }
-             }
-             
-
-            public class StringPropertyMapper : IPropertyMapper
-            {
-                public string Map(object property)
-                {
-                    return "'" + property.ToString() + "'";
-                }
-            }
-
-            public class DateTimePropertyMapper : IPropertyMapper
-            {
-                public string Map(object property)
-                {
-
-                    return "'" + ((DateTime)property).ToString("yyyy-MM-dd") + "'";
-            
-                }
-            }
-
-
-             public class PropertyMapperSwitch
-            {
-                public  static IPropertyMapper GetPropertyMapper<T>() 
-                {
-
-                    switch (Type.GetTypeCode(typeof(T)))
-                    {
-                        case TypeCode.Int32:
-                            return new IntPropertyMapper();
-
-                        case TypeCode.String:
-                            return new StringPropertyMapper();
-
-                        case TypeCode.DateTime:
-                            return new DateTimePropertyMapper();
-
-                    }
-                    throw new Exception("Nie zdefiniowano mappera dla tego typu.");
-                }
-            }
-
-
-
-            for (int i = 0; i < properties.Length; i++)
-            { 
-                    if (properties[i].Name == "Id") continue;
-
-                    Type propType = properties[i].PropertyType;
-                    object propValue = properties[i].GetValue(obj);
-
-                    IPropertyMapper propMapper = (IPropertyMapper)typeof(PropertyMapperSwitch)
-                        .GetMethod("GetPropertyMapper")
-                        .MakeGenericMethod(propType)
-                        .Invoke(null, null);
-
-                    string value = propMapper.Map(propValue);
-                 
-                    queryBuilder.Append(value+",");                  
-            }  
-
+     public class Address
+    {
+        public int Id { get; set; }
+        public string Street { get; set; }
+        public int HomeNo { get; set; }
+        public City City { get; set; }
+    }
 
 ```
 
-#Podsumowanie
+W tej sytuacji kwarendy miały by taką postać.
+
+```sqlserver
+
+CREATE TABLE City(
+    Id INT IDENTITY PRIMARY KEY NOT NULL,
+    Name VARCHAR(20) NOT NULL,
+    PostalCode VARCHAR(20)
+)
+
+CREATE TABLE Address(
+    Id INT IDENTITY PRIMARY KEY NOT NULL,
+    City_id INT NOT NULL,
+    Street VARCHAR(20) NOT NULL,
+    FOREIGN KEY (City_id) REFERENCES City(Id)
+
+)
+
+CREATE TABLE Person(
+    Id INT IDENTITY PRIMARY KEY NOT NULL,
+    Name VARCHAR(20),
+    Age INT,
+    Address_id INT,
+    FOREIGN KEY (Address_id) REFERENCES Address(Id)
+)
+
+```
+Widzimy, że nasze klasy tworzą drzewo zależnosci. Korzeniem drzewa jest typ Person. Address jest węzłem, a City liściem.
+Z naszych kwarend wynika, że mapowanie tego drzewa musimy zaczynać od liści. Jest to ważne spostrzeżenie ponieważ definiuje ono flow naszego kodu.
+
+Przed kompilacją nie wiemy jak bardzo złożony będzie drzewo oraz ile będzie mieć wierzchołków. Chcemy móc obsługiwać zarówno mapowanie obiektów
+płaskich czyli drzew jednowierzchołkowych jak i bardziej skomplikowanych drzew.
+Nasze obostrzenie jest jedank takie, że musi to być drzewo. Nie będziemy więc (przynajmniej narazie) obsługiwać sytuacji w których wierzchołki z
+różnych gałęzi mają do siebie referencję.
