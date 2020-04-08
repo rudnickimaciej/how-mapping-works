@@ -62,7 +62,7 @@ Spróbujmy zmapować inną klasę (również płaską), która oprócz powyższy
 
 Na ten moment, tylko metoda Get obsługuje typ DateTime. Przeanalizujmy co musimy dodać do metod CreateTable i Save.
 
-# Refoktoring metody CreateTable
+# Refoktoryzacja  metody CreateTable
 
  W tej metodzie musimy tylko dodać informacje dotyczącą mapowania .netowskiego typu DateTime na sqlserverowy odpowiednik.
 Aktualna wersja kodu pozwala nam to definiować w słowniku.
